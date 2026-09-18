@@ -106,12 +106,12 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
 
 ## 開発
 
-`npx github:...` でのインストール時にビルドを走らせると、devDependencies とビルドスクリプトの実行が必要になり環境によって失敗する。そのため **ビルド済みの `dist/` をコミットしている**。
+`dist/` はコミットしない。`npx github:...` でのインストール時に `prepare` が走り、そこでビルドされる。
 
 ```bash
 npm install
 npm run typecheck
-npm run build     # src/ を変更したら必ず実行し、dist/ も一緒にコミットする
+npm run build     # 手元で試す用。コミットするのは src/ だけ
 ```
 
 手元のリポジトリで試すときは、対象リポジトリから直接叩く:

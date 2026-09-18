@@ -16,7 +16,8 @@
   },
   "scripts": {
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=dist/cli.js --banner:js=\"#!/usr/bin/env node\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "^0.85.1",
