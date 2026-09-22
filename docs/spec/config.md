@@ -2,6 +2,8 @@
 
 実装: `src/config.ts`。
 
+このリポジトリのルートにある `loopi.config.json` は loopi 自身を対象に回すための設定で、雛形ではない。雛形は `loopi init` が生成する（[init.md](init.md)）。
+
 ## 探索
 
 1. `--config <path>`（リポジトリのルートからの相対パス、または絶対パス）
