@@ -23,7 +23,12 @@ export type Config = {
   /** 変更に含まれると自動マージを止めるパス */
   holdOnChange: string[];
   test: { command: string; reportCommand: string };
-  models: { pi: { provider: string; model: string }; claude: string };
+  models: {
+    pi: { provider: string; model: string };
+    claude: string;
+    /** Codex 一次レビューの指定。省略したキーは Codex CLI の既定に従う */
+    codex: { model?: string; reasoningEffort?: string };
+  };
   limits: { maxReviewRounds: number; maxTestFixes: number };
   /** これが付いた issue は自動マージしない */
   noAutomergeLabel: string;
@@ -39,7 +44,11 @@ const DEFAULTS = {
   code: {},
   protectedPaths: [] as string[],
   holdOnChange: [] as string[],
-  models: { pi: { provider: "opencode-go", model: "deepseek-v4.1-flash" }, claude: "claude-fable-5-1" },
+  models: {
+    pi: { provider: "opencode-go", model: "deepseek-v4.1-flash" },
+    claude: "claude-fable-5-1",
+    codex: {} as { model?: string; reasoningEffort?: string },
+  },
   limits: { maxReviewRounds: 3, maxTestFixes: 3 },
   noAutomergeLabel: "no-automerge",
 };
@@ -72,6 +81,7 @@ export function loadConfig(repo: string, explicit?: string): Config {
     models: {
       pi: { ...DEFAULTS.models.pi, ...(raw.models?.pi ?? {}) },
       claude: raw.models?.claude ?? DEFAULTS.models.claude,
+      codex: { ...DEFAULTS.models.codex, ...(raw.models?.codex ?? {}) },
     },
     limits: { ...DEFAULTS.limits, ...(raw.limits ?? {}) },
     test: raw.test ?? {},

@@ -15,7 +15,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { createAgentSession, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
-import { Codex } from "@openai/codex-sdk";
+import { Codex, type ModelReasoningEffort, type ThreadOptions } from "@openai/codex-sdk";
 import { type Config, docSentence, loadConfig } from "./config.js";
 import { classifyExit } from "./exit.js";
 
@@ -38,6 +38,8 @@ export async function run(opts: RunOptions): Promise<never> {
   const PI_PROVIDER = process.env.PI_PROVIDER ?? cfg.models.pi.provider;
   const PI_MODEL = process.env.PI_MODEL ?? cfg.models.pi.model;
   const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? cfg.models.claude;
+  const CODEX_MODEL = process.env.CODEX_MODEL ?? cfg.models.codex.model;
+  const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT ?? cfg.models.codex.reasoningEffort;
   const MAX_REVIEW_ROUNDS = cfg.limits.maxReviewRounds;   // Codex レビュー → 修正 の最大回数
   const MAX_TEST_FIXES = cfg.limits.maxTestFixes;         // 1ラウンド内でテスト失敗を pi に戻す最大回数
   const TEST_CMD = cfg.test.command;
@@ -163,7 +165,7 @@ export async function run(opts: RunOptions): Promise<never> {
   // ───────── 1. 準備 ─────────
   fs.appendFileSync(LOG, `\n\n################ 実行開始 ${new Date().toISOString()} ################\n`);
   setStatus("running");
-  log(`issue #${n} 開始（pi: ${PI_PROVIDER}/${PI_MODEL}, claude: ${CLAUDE_MODEL}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
+  log(`issue #${n} 開始（pi: ${PI_PROVIDER}/${PI_MODEL}, claude: ${CLAUDE_MODEL}, codex: ${CODEX_MODEL ?? "cli既定"}/${CODEX_REASONING_EFFORT ?? "cli既定"}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
 
   const issueJson = JSON.parse(must(`gh issue view ${n} --json number,title,body,labels,state`));
   if (issueJson.state !== "OPEN") fail(`issue #${n} は ${issueJson.state} です`);
@@ -244,6 +246,10 @@ ${ISSUE}`;
 
   // ───────── 3. レビューループ（Codex → Claude 取捨選択 → pi） ─────────
   const codex = new Codex();
+  // 指定されたキーだけを渡す。無いキーは Codex CLI の既定（~/.codex/config.toml）に従う
+  const codexThreadOptions: ThreadOptions = { workingDirectory: wt };
+  if (CODEX_MODEL) codexThreadOptions.model = CODEX_MODEL;
+  if (CODEX_REASONING_EFFORT) codexThreadOptions.modelReasoningEffort = CODEX_REASONING_EFFORT as ModelReasoningEffort;
   const codexSchema = {
     type: "object",
     properties: {
@@ -294,7 +300,7 @@ ${ISSUE}`;
     log(`ラウンド${round}: Codex レビュー`);
     let turn: any;
     try {
-      turn = await codex.startThread({ workingDirectory: wt }).run(
+      turn = await codex.startThread(codexThreadOptions).run(
 `あなたはコードレビュアーです。ファイルは一切変更しないでください。
 ${docSentence(cfg, ref => `${ref} を読んだうえで、\n`)}下の差分をレビューし、重大な問題だけを issues に挙げてください:
 - バグ、受け入れ条件の未達、仕様・設計判断（spec / ADR）違反、テスト不足、セキュリティ

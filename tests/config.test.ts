@@ -43,6 +43,21 @@ test("入れ子の設定は部分的に上書きできる", () => {
   assert.equal(cfg.limits.maxTestFixes, 3);
 });
 
+test("models.codex を省略すると空オブジェクトになる", () => {
+  const cfg = loadConfig(repoWith({ test: { command: "npm test" } }));
+  assert.deepEqual(cfg.models.codex, {});
+});
+
+test("models.codex は model と reasoningEffort を個別に保持する", () => {
+  const withModel = loadConfig(repoWith({ test: { command: "npm test" }, models: { codex: { model: "custom-codex" } } }));
+  assert.equal(withModel.models.codex.model, "custom-codex");
+  assert.equal(withModel.models.codex.reasoningEffort, undefined);
+
+  const withEffort = loadConfig(repoWith({ test: { command: "npm test" }, models: { codex: { reasoningEffort: "medium" } } }));
+  assert.equal(withEffort.models.codex.model, undefined);
+  assert.equal(withEffort.models.codex.reasoningEffort, "medium");
+});
+
 test("設定ファイルが無ければ init を案内するエラー", () => {
   assert.throws(() => loadConfig(repoWith(undefined)), /loopi init/);
 });
