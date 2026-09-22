@@ -120,17 +120,33 @@ npm run build     # 手元で試す用。コミットするのは src/ だけ
 node /path/to/loopi/dist/cli.js run 12
 ```
 
+### リポジトリ構成
+
+このリポジトリには「ツールとしての loopi」と「loopi を対象リポジトリとして回すための設定」が同居している。
+
+| 場所 | 役割 |
+|---|---|
+| `src/` | 本体。`cli.ts`（引数）→ `run.ts`（パイプライン）/ `init.ts`（導入）、`config.ts`（設定） |
+| `templates/` | `init` が対象リポジトリにコピーする skill の元 |
+| `docs/spec/`, `docs/adr/` | 仕様と設計判断。README と食い違ったら `docs/spec/` が正 |
+| `tests/` | `npm test` のテスト |
+| `loopi.config.json`, `.claude/` | **loopi 自身を対象に回すための設定と skill**。他のリポジトリに入れる雛形ではない（雛形は `loopi init` が生成する。中身は `src/init.ts`） |
+| `AGENTS.md`, `.github/ISSUE_TEMPLATE/` | エージェント向けの共通ルールと issue の型。開発規約であり、パイプラインの入力でもある |
+
 ### loopi 自身を loopi で開発する（dogfooding）
 
-このリポジトリには自分自身を対象にした `loopi.config.json` と `.claude/skills/loopi-run/` が入っている。issue を `.github/ISSUE_TEMPLATE/task.md` の型（背景・提案・受け入れ条件・触ってよいファイル・スコープ外）で書いてから:
+issue を `.github/ISSUE_TEMPLATE/task.md` の型（背景・提案・関連ドキュメント・受け入れ条件・触ってよいファイル・スコープ外）で書いてから、リポジトリのルートで実行する。どの loopi が動くかはコマンドで決まる:
 
-```bash
-npx github:hashi-yu/loopi run 12      # GitHub の main にある loopi で、この repo の issue #12 を実装する
-node dist/cli.js run 12               # 手元でビルドした loopi を使う（run.ts を直した直後の確認など）
-```
+| やりたいこと | コマンド | 動く loopi |
+|---|---|---|
+| issue #5 を普通に回す | `npx github:hashi-yu/loopi run 5` | GitHub の `main` |
+| ルートで直した `run.ts` を試す | `npm run build && node dist/cli.js run 5` | 手元の未コミットの変更 |
+| issue #3 の作業フォルダにある直した `run.ts` で、別の issue #5 を回す | `node ../wt-issue-3/dist/cli.js run 5` | issue #3 の実装（マージ前に試せる） |
 
-- 作業フォルダは `../wt-issue-12`。`test.command` が `npm ci && npm test` なので、作業フォルダに `node_modules` が無くても動く
-- 仕様は `docs/spec/`、設計判断は `docs/adr/`。README と食い違ったら `docs/spec/` が正
+作業フォルダの `dist/` は `test.command` の `npm ci` が `prepare` 経由で作るので、パイプラインが一度通っていればビルド済み。設定と `logs/` はコマンドを叩いたルート側のものが使われ、作業フォルダ側の `loopi.config.json` は読まれない。
+
+- 作業フォルダは `../wt-issue-<番号>`。`test.command` が `npm ci && npm test` なので、作業フォルダに `node_modules` が無くても動く
 - `docs/spec/` / `README.md` / `package.json` / `loopi.config.json` を変更した PR は自動マージせず確認待ちになる（`holdOnChange`）
 - `docs/adr/` / `AGENTS.md` / `.github/` / `.claude/` は保護パス。実装担当が触ると停止する
+- `templates/skills/loopi-run/SKILL.md` を直したら `cp templates/skills/loopi-run/SKILL.md .claude/skills/loopi-run/SKILL.md` で反映する（`.claude/` は保護パスなので実装担当は触れない。人間が反映する）
 - `npx github:...` は npm のキャッシュを使うため、マージしたばかりの変更を使いたいときは `npx --yes github:hashi-yu/loopi#main` のようにコミット指定を付けるか `node dist/cli.js` を使う
