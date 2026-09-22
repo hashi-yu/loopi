@@ -371,10 +371,11 @@ ${rejectedMd}`;
           type: "object",
           properties: {
             condition: { type: "string" },
-            tests: { type: "array", items: { type: "string" } },
+            verifiedBy: { type: "string", enum: ["test", "review"] },
             result: { type: "string", enum: ["passed", "failed", "missing"] },
+            evidence: { type: "array", items: { type: "string" } },
           },
-          required: ["condition", "tests", "result"],
+          required: ["condition", "verifiedBy", "result", "evidence"],
         },
       },
     },
@@ -402,8 +403,12 @@ ${rejectedMd}`;
 「テスト実行結果」は実際に実行した \`${TEST_REPORT_CMD}\` の出力です。テストを自分で実行する必要はありません（実行権限もありません）。
 
 ${docSentence(cfg, ref => `${ref} を読み、`)}次を行ってください:
-1. acceptance: issue の受け入れ条件を1つずつ挙げ、それを検証しているテスト名（テスト実行結果に出ている名前）と結果を対応させる
-   - 該当テストが PASSED → passed / FAILED → failed / 該当テストがない、またはテストが条件を実質的に検証していない → missing
+1. acceptance: issue の受け入れ条件を1つずつ挙げ、検証方法（verifiedBy）・判定結果（result）・根拠（evidence）を対応させる
+   - 条件の末尾に「（レビュー確認）」があれば verifiedBy は review、無ければ test
+   - test: 該当テストが通った → passed / 落ちた → failed / 該当テストが無い、または条件を実質的に検証していない → missing
+   - review: 差分と文書が条件を満たす → passed / 満たさない、または反する → failed / 判断できる材料が無い → missing
+   - evidence には根拠を挙げる。test ならテスト名、review ならファイルと行、または文書の節
+   - 印のある条件がテストで検証できたはずだと考えても、判定は変えずに concerns へ「非ブロッキング:」と付けて書く
 2. 次をすべて満たすときだけ verdict を merge にする:
    - acceptance がすべて passed
    - 仕様・決定済みの設計判断に違反していない
@@ -418,15 +423,18 @@ summary は日本語で3行以内。`,
     const concernsMd = finalReview.concerns.length ? finalReview.concerns.map((c: string) => `- ${c}`).join("\n") : "なし";
     const mark = (r: string) => (r === "passed" ? "✅" : r === "failed" ? "❌" : "⚠️ missing");
     const acceptanceMd = finalReview.acceptance
-      .map((a: any) => `| ${a.condition.replace(/\|/g, "\\|")} | ${a.tests.map((t: string) => `\`${t}\``).join("<br>") || "-"} | ${mark(a.result)} |`)
+      .map((a: any) => `| ${a.condition.replace(/\|/g, "\\|")} | ${a.verifiedBy === "review" ? "レビュー確認" : "テスト"} | ${a.evidence.map((e: string) => `\`${e}\``).join("<br>") || "-"} | ${mark(a.result)} |`)
       .join("\n");
-    runCmd(`gh pr comment ${pr.number} --body ${shq(`### 🤖 Claude 最終レビュー: **${finalReview.verdict}**\n\n${finalReview.summary}\n\n**受け入れ条件とテスト**\n\n| 条件 | テスト | 結果 |\n|---|---|---|\n${acceptanceMd}\n\n**懸念点**\n${concernsMd}`)}`, wt);
+    runCmd(`gh pr comment ${pr.number} --body ${shq(`### 🤖 Claude 最終レビュー: **${finalReview.verdict}**\n\n${finalReview.summary}\n\n**受け入れ条件の判定**\n\n| 条件 | 検証方法 | 根拠 | 判定結果 |\n|---|---|---|---|\n${acceptanceMd}\n\n**懸念点**\n${concernsMd}`)}`, wt);
     saveState({ finalReviewKey: finalKey, finalReview });
   }
 
   const holdReasons: string[] = [];
   if (finalReview.verdict !== "merge") holdReasons.push("最終レビューが hold");
-  if (finalReview.acceptance.some((a: any) => a.result !== "passed")) holdReasons.push("テストで確認できない受け入れ条件がある");
+  if (finalReview.acceptance.some((a: any) => a.result !== "passed")) {
+    holdReasons.push("passed でない受け入れ条件がある");
+    holdReasons.push(...finalReview.acceptance.filter((a: any) => a.result !== "passed").map((a: any) => a.condition));
+  }
   if (holdPaths.length) holdReasons.push(`変更に ${holdPaths.join(", ")} を含む`);
   if (labels.includes(cfg.noAutomergeLabel)) holdReasons.push(`\`${cfg.noAutomergeLabel}\` ラベル`);
   if (NO_MERGE) holdReasons.push("--no-merge 指定");

@@ -87,7 +87,7 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
 次のいずれかに当たると PR を作って止まり、人間の確認を待つ。
 
 - 最終レビューが `hold`
-- テストで確認できない受け入れ条件がある
+- `passed` でない受け入れ条件がある
 - `holdOnChange` のパスを変更している
 - `noAutomergeLabel` が付いている
 - `--no-merge` を指定した

@@ -73,8 +73,9 @@
 ### 5. Claude 最終レビュー
 
 - `test.reportCommand` を作業フォルダで実行し、失敗したら `escalated`
-- issue・最終差分（先頭 80,000 文字）・テスト結果（末尾 20,000 文字）・採用/却下の記録を渡し、`{ verdict: merge|hold, summary, concerns: string[], acceptance: [{ condition, tests: string[], result: passed|failed|missing }] }` を受け取る
-- 結果を PR にコメントする（verdict、summary、受け入れ条件とテストの対応表、懸念点）
+- issue・最終差分（先頭 80,000 文字）・テスト結果（末尾 20,000 文字）・採用/却下の記録を渡し、`{ verdict: merge|hold, summary, concerns: string[], acceptance: [{ condition, verifiedBy: test|review, result: passed|failed|missing, evidence: string[] }] }` を受け取る
+- 受け入れ条件ごとに、issue の末尾の印（`（レビュー確認）` があれば review、無ければ test）で検証方法を決め、検証方法ごとの意味で判定する（→ ADR 0008）
+- 結果を PR にコメントする（verdict、summary、受け入れ条件の判定表（条件・検証方法・根拠・判定結果）、懸念点）
 - `finalReviewKey`（レビュー合格キーと同じ計算）と結果を `state.json` に保存する
 
 ### 6. 自動マージの判定
@@ -82,7 +83,7 @@
 次のいずれかに当たれば `pr_waiting`（`reasons` にすべて列挙）:
 
 - `verdict` が `merge` でない
-- `acceptance` に `passed` でないものがある
+- `acceptance` に `passed` でないものがある（理由「passed でない受け入れ条件がある」に続けて、その条件の文を 1 条件 1 要素で列挙する）
 - 変更ファイルに `holdOnChange` のパスが含まれる
 - issue に `noAutomergeLabel` が付いている（実行開始時に読んだラベル）
 - `--no-merge`
