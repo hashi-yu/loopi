@@ -12,7 +12,7 @@
 - 設定はリポジトリのルートから読む。作業フォルダにある設定は使わない（実装担当が設定を変えても、その実行には影響しない）
 - 既定値は `src/config.ts` の `DEFAULTS` に置き、入れ子はキー単位で上書きする
 - `test.command` だけは必須。無ければ起動しない
-- 環境変数で上書きできるのはモデル指定（`PI_PROVIDER` / `PI_MODEL` / `CLAUDE_MODEL` / `CODEX_MODEL` / `CODEX_REASONING_EFFORT`）だけ。試しに別モデルで回す用途に限る
+- 環境変数で上書きできるのはモデル指定（`PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT`）だけ。試しに別モデルで回す用途に限る
 
 ## 結果
 
