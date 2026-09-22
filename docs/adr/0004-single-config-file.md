@@ -13,6 +13,7 @@
 - 既定値は `src/config.ts` の `DEFAULTS` に置き、入れ子はキー単位で上書きする
 - `test.command` だけは必須。無ければ起動しない
 - 環境変数で上書きできるのはモデル指定（`PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT`）だけ。試しに別モデルで回す用途に限る
+- コマンドのフラグで選べるのはプロファイル名（`--profile <名前>`）だけ。プロファイルは `models` の部分上書きで、モデル指定以外は含まない。優先順位は環境変数 > プロファイル > `models`
 
 ## 結果
 
