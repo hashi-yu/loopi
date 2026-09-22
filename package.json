@@ -17,6 +17,7 @@
   "scripts": {
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=dist/cli.js --banner:js=\"#!/usr/bin/env node\"",
     "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && node --import tsx --test \"tests/**/*.test.ts\"",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.20.3",
     "esbuild": "^0.25.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.0"
   },
   "license": "MIT"

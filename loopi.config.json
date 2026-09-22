@@ -1,0 +1,17 @@
+{
+  "baseBranch": "main",
+  "docs": { "agents": "AGENTS.md" },
+  "code": { "testDir": "tests/" },
+  "protectedPaths": ["AGENTS.md", ".github/", ".claude/"],
+  "holdOnChange": ["README.md", "loopi.config.json", "package.json"],
+  "test": {
+    "command": "npm ci --no-audit --no-fund && npm test",
+    "reportCommand": "node --import tsx --test --test-reporter=spec \"tests/**/*.test.ts\""
+  },
+  "models": {
+    "pi": { "provider": "opencode-go", "model": "deepseek-v4.1-flash" },
+    "claude": "claude-fable-5-1"
+  },
+  "limits": { "maxReviewRounds": 3, "maxTestFixes": 3 },
+  "noAutomergeLabel": "no-automerge"
+}
