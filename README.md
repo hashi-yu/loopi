@@ -130,6 +130,7 @@ node dist/cli.js run 12               # 手元でビルドした loopi を使う
 ```
 
 - 作業フォルダは `../wt-issue-12`。`test.command` が `npm ci && npm test` なので、作業フォルダに `node_modules` が無くても動く
-- `README.md` / `package.json` / `loopi.config.json` を変更した PR は自動マージせず確認待ちになる（`holdOnChange`）
-- `AGENTS.md` / `.github/` / `.claude/` は保護パス。実装担当が触ると停止する
+- 仕様は `docs/spec/`、設計判断は `docs/adr/`。README と食い違ったら `docs/spec/` が正
+- `docs/spec/` / `README.md` / `package.json` / `loopi.config.json` を変更した PR は自動マージせず確認待ちになる（`holdOnChange`）
+- `docs/adr/` / `AGENTS.md` / `.github/` / `.claude/` は保護パス。実装担当が触ると停止する
 - `npx github:...` は npm のキャッシュを使うため、マージしたばかりの変更を使いたいときは `npx --yes github:hashi-yu/loopi#main` のようにコミット指定を付けるか `node dist/cli.js` を使う

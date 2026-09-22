@@ -1,9 +1,9 @@
 {
   "baseBranch": "main",
-  "docs": { "agents": "AGENTS.md" },
+  "docs": { "agents": "AGENTS.md", "spec": "docs/spec/", "adr": "docs/adr/" },
   "code": { "testDir": "tests/" },
-  "protectedPaths": ["AGENTS.md", ".github/", ".claude/"],
-  "holdOnChange": ["README.md", "loopi.config.json", "package.json"],
+  "protectedPaths": ["docs/adr/", "AGENTS.md", ".github/", ".claude/"],
+  "holdOnChange": ["docs/spec/", "README.md", "loopi.config.json", "package.json"],
   "test": {
     "command": "npm ci --no-audit --no-fund && npm test",
     "reportCommand": "node --import tsx --test --test-reporter=spec \"tests/**/*.test.ts\""
