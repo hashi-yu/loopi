@@ -31,6 +31,7 @@
 | `merged` | マージ済み | `pr`, `review`, `triage` | 0 |
 | `pr_waiting` | PR を作り、人間の確認待ち | `pr`, `reasons`, `review`, `triage` | 0 |
 | `escalated` | PR を作らず停止（または最終レビュー後に停止）。issue にコメントする | `reason`, `detail` | 2 |
+| `interrupted` | 外部から停止された（再実行すると成功済みの工程を飛ばして続きから進む） | `reason` | 3 |
 | `error` | 環境・設定・外部コマンドの失敗 | `reason` | 1 |
 
 ## 工程
