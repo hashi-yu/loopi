@@ -105,6 +105,15 @@ export async function run(opts: RunOptions): Promise<never> {
   // Ctrl-C は同じプロセスグループの子にも届くので、子側の 130 / SIGINT を classifyExit が拾う。
   process.on("SIGINT", interrupt);
   process.on("SIGTERM", interrupt);
+  // 同期呼び出しが続く区間の直前でイベントループへ戻し、保留中のシグナルハンドラを走らせる。
+  // シグナルは poll フェーズで配送され、setImmediate は check フェーズで走る。poll フェーズの
+  // コールバック（SDK の I/O 完了）から続いている場合、1回目の immediate は同じ周回の check で
+  // 解決して poll を通らないので、2回待って次の周回の poll を確実に経由させる。
+  // これが無いと、同期呼び出しの最中に loopi 本体だけが受けた停止要求が失われる。
+  async function checkpoint() {
+    await new Promise(r => setImmediate(r));
+    await new Promise(r => setImmediate(r));
+  }
   function escalate(reason: string, detail = ""): never {
     log(`人間の判断が必要: ${reason}`);
     write(detail + "\n");
@@ -429,6 +438,9 @@ summary は日本語で3行以内。`,
     saveState({ finalReviewKey: finalKey, finalReview });
   }
 
+  // ここから先は同期呼び出しが続くため、その前に保留中の停止要求を処理する
+  await checkpoint();
+
   const holdReasons: string[] = [];
   if (finalReview.verdict !== "merge") holdReasons.push("最終レビューが hold");
   if (finalReview.acceptance.some((a: any) => a.result !== "passed")) {
@@ -448,6 +460,7 @@ summary は日本語で3行以内。`,
   // ───────── 6. 最新の基準ブランチで再テストしてマージ ─────────
   log(`最新の ${BASE} を取り込んで再テスト`);
   must("git fetch origin", wt);
+  await checkpoint();
   const merge = runCmd(`git merge --no-edit ${ORIGIN_BASE}`, wt);
   if (!merge.ok) { runCmd("git merge --abort", wt); escalate(`${BASE} との競合があります`, merge.out.slice(-2000)); }
   const t = runCmd(TEST_CMD, wt);
@@ -456,6 +469,7 @@ summary は日本語で3行以内。`,
   must(`git push origin ${branch}`, wt);
 
   log("マージ");
+  await checkpoint();
   // worktree 内で --delete-branch を使うと基準ブランチの checkout に失敗するため、ブランチは個別に削除する
   must(`gh pr merge ${pr.number} --squash`);
   runCmd(`git push origin --delete ${branch}`);
