@@ -23,7 +23,7 @@ test("最小の設定に既定値が補われる", () => {
   assert.equal(cfg.limits.maxTestFixes, 3);
   assert.equal(cfg.noAutomergeLabel, "no-automerge");
   assert.equal(typeof cfg.models.pi.provider, "string");
-  assert.equal(typeof cfg.models.claude, "string");
+  assert.equal(cfg.models.claude.model, "claude-fable-5-1");
 });
 
 test("test.reportCommand を省略すると test.command が使われる", () => {
@@ -43,19 +43,40 @@ test("入れ子の設定は部分的に上書きできる", () => {
   assert.equal(cfg.limits.maxTestFixes, 3);
 });
 
-test("models.codex を省略すると空オブジェクトになる", () => {
+test("models を省略すると pi / claude / codex とも既定値のオブジェクトになり effort は未設定", () => {
   const cfg = loadConfig(repoWith({ test: { command: "npm test" } }));
+  assert.deepEqual(cfg.models.pi, { provider: "opencode-go", model: "deepseek-v4.1-flash" });
+  assert.deepEqual(cfg.models.claude, { model: "claude-fable-5-1" });
   assert.deepEqual(cfg.models.codex, {});
+  assert.equal(cfg.models.pi.effort, undefined);
+  assert.equal(cfg.models.claude.effort, undefined);
+  assert.equal(cfg.models.codex.effort, undefined);
 });
 
-test("models.codex は model と reasoningEffort を個別に保持する", () => {
-  const withModel = loadConfig(repoWith({ test: { command: "npm test" }, models: { codex: { model: "custom-codex" } } }));
-  assert.equal(withModel.models.codex.model, "custom-codex");
-  assert.equal(withModel.models.codex.reasoningEffort, undefined);
+test("models.claude と models.codex は model と effort をそのまま保持する", () => {
+  const cfg = loadConfig(repoWith({
+    test: { command: "npm test" },
+    models: {
+      claude: { model: "custom-claude", effort: "high" },
+      codex: { model: "custom-codex", effort: "medium" },
+    },
+  }));
+  assert.deepEqual(cfg.models.claude, { model: "custom-claude", effort: "high" });
+  assert.deepEqual(cfg.models.codex, { model: "custom-codex", effort: "medium" });
+});
 
-  const withEffort = loadConfig(repoWith({ test: { command: "npm test" }, models: { codex: { reasoningEffort: "medium" } } }));
-  assert.equal(withEffort.models.codex.model, undefined);
-  assert.equal(withEffort.models.codex.reasoningEffort, "medium");
+test("models は pi / claude / codex のすべてで入れ子の部分上書きができる", () => {
+  const cfg = loadConfig(repoWith({
+    test: { command: "npm test" },
+    models: {
+      pi: { effort: "high" },
+      claude: { effort: "low" },
+      codex: { effort: "xhigh" },
+    },
+  }));
+  assert.deepEqual(cfg.models.pi, { provider: "opencode-go", model: "deepseek-v4.1-flash", effort: "high" });
+  assert.deepEqual(cfg.models.claude, { model: "claude-fable-5-1", effort: "low" });
+  assert.deepEqual(cfg.models.codex, { effort: "xhigh" });
 });
 
 test("設定ファイルが無ければ init を案内するエラー", () => {

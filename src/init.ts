@@ -93,7 +93,7 @@ export function init(opts: { force: boolean }): never {
       protectedPaths: [adr, agents, ".github/", ".claude/"].filter(Boolean),
       holdOnChange: [spec].filter(Boolean),
       test: { command: test.command, reportCommand: test.reportCommand },
-      models: { pi: { provider: "opencode-go", model: "deepseek-v4.1-flash" }, claude: "claude-fable-5-1" },
+      models: { pi: { provider: "opencode-go", model: "deepseek-v4.1-flash" }, claude: { model: "claude-fable-5-1" } },
       limits: { maxReviewRounds: 3, maxTestFixes: 3 },
       noAutomergeLabel: "no-automerge",
     };

@@ -59,9 +59,9 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
     "reportCommand": "python -m pytest -v --tb=short"
   },
   "models": {
-    "pi": { "provider": "opencode-go", "model": "deepseek-v4.1-flash" },
-    "claude": "claude-fable-5-1",
-    "codex": { "reasoningEffort": "medium" }
+    "pi": { "provider": "opencode-go", "model": "deepseek-v4.1-flash", "effort": "medium" },
+    "claude": { "model": "claude-fable-5-1", "effort": "high" },
+    "codex": { "model": "gpt-5.6-sol", "effort": "medium" }
   },
   "limits": { "maxReviewRounds": 3, "maxTestFixes": 3 },
   "noAutomergeLabel": "no-automerge"
@@ -81,7 +81,7 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
 | `limits` | レビューの最大ラウンド数と、1ラウンド内でテスト失敗を実装担当に戻す最大回数 |
 | `noAutomergeLabel` | これが付いた issue は自動マージしない |
 
-環境変数 `PI_PROVIDER` / `PI_MODEL` / `CLAUDE_MODEL` は設定より優先される。
+環境変数 `PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定より優先される。
 
 ## 自動マージを止める条件
 
