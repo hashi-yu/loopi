@@ -21,6 +21,9 @@ import { classifyExit } from "./exit.js";
 
 export type RunOptions = { issue: string; noMerge: boolean; fresh: boolean; config?: string };
 
+/** pi の thinking level。SDK が型を再輸出していないため、指定の型から取り出す */
+type ThinkingLevel = NonNullable<NonNullable<Parameters<typeof createAgentSession>[0]>["thinkingLevel"]>;
+
 export async function run(opts: RunOptions): Promise<never> {
   const n = opts.issue;
   const NO_MERGE = opts.noMerge;
@@ -37,9 +40,11 @@ export async function run(opts: RunOptions): Promise<never> {
 
   const PI_PROVIDER = process.env.PI_PROVIDER ?? cfg.models.pi.provider;
   const PI_MODEL = process.env.PI_MODEL ?? cfg.models.pi.model;
-  const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? cfg.models.claude;
+  const PI_EFFORT = process.env.PI_EFFORT ?? cfg.models.pi.effort;
+  const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? cfg.models.claude.model;
+  const CLAUDE_EFFORT = process.env.CLAUDE_EFFORT ?? cfg.models.claude.effort;
   const CODEX_MODEL = process.env.CODEX_MODEL ?? cfg.models.codex.model;
-  const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT ?? cfg.models.codex.reasoningEffort;
+  const CODEX_EFFORT = process.env.CODEX_EFFORT ?? cfg.models.codex.effort;
   const MAX_REVIEW_ROUNDS = cfg.limits.maxReviewRounds;   // Codex レビュー → 修正 の最大回数
   const MAX_TEST_FIXES = cfg.limits.maxTestFixes;         // 1ラウンド内でテスト失敗を pi に戻す最大回数
   const TEST_CMD = cfg.test.command;
@@ -147,6 +152,7 @@ export async function run(opts: RunOptions): Promise<never> {
     const r = spawnSync("claude", [
       "-p", prompt,
       "--model", CLAUDE_MODEL,
+      ...(CLAUDE_EFFORT ? ["--effort", CLAUDE_EFFORT] : []),
       "--output-format", "json",
       "--json-schema", JSON.stringify(schema),
       "--permission-mode", "dontAsk",
@@ -165,7 +171,7 @@ export async function run(opts: RunOptions): Promise<never> {
   // ───────── 1. 準備 ─────────
   fs.appendFileSync(LOG, `\n\n################ 実行開始 ${new Date().toISOString()} ################\n`);
   setStatus("running");
-  log(`issue #${n} 開始（pi: ${PI_PROVIDER}/${PI_MODEL}, claude: ${CLAUDE_MODEL}, codex: ${CODEX_MODEL ?? "cli既定"}/${CODEX_REASONING_EFFORT ?? "cli既定"}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
+  log(`issue #${n} 開始（pi: ${PI_PROVIDER}/${PI_MODEL}/${PI_EFFORT ?? "既定"}, claude: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}, codex: ${CODEX_MODEL ?? "既定"}/${CODEX_EFFORT ?? "既定"}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
 
   const issueJson = JSON.parse(must(`gh issue view ${n} --json number,title,body,labels,state`));
   if (issueJson.state !== "OPEN") fail(`issue #${n} は ${issueJson.state} です`);
@@ -208,7 +214,14 @@ ${ISSUE}`;
       const modelRuntime = await ModelRuntime.create();
       const model = modelRuntime.getModel(PI_PROVIDER, PI_MODEL);
       if (!model) fail(`モデルが見つかりません: ${PI_PROVIDER}/${PI_MODEL}`);
-      ({ session } = await createAgentSession({ cwd: wt, sessionManager: SessionManager.inMemory(wt), modelRuntime, model }));
+      ({ session } = await createAgentSession({
+        cwd: wt,
+        sessionManager: SessionManager.inMemory(wt),
+        modelRuntime,
+        model,
+        // effort は値があるときだけ渡す。無ければ pi の設定（無ければ medium）に従う
+        ...(PI_EFFORT ? { thinkingLevel: PI_EFFORT as ThinkingLevel } : {}),
+      }));
       session.subscribe((ev: any) => {
         if (ev.type === "message_update" && ev.assistantMessageEvent.type === "text_delta") write(ev.assistantMessageEvent.delta);
       });
@@ -249,7 +262,7 @@ ${ISSUE}`;
   // 指定されたキーだけを渡す。無いキーは Codex CLI の既定（~/.codex/config.toml）に従う
   const codexThreadOptions: ThreadOptions = { workingDirectory: wt };
   if (CODEX_MODEL) codexThreadOptions.model = CODEX_MODEL;
-  if (CODEX_REASONING_EFFORT) codexThreadOptions.modelReasoningEffort = CODEX_REASONING_EFFORT as ModelReasoningEffort;
+  if (CODEX_EFFORT) codexThreadOptions.modelReasoningEffort = CODEX_EFFORT as ModelReasoningEffort;
   const codexSchema = {
     type: "object",
     properties: {
@@ -363,8 +376,8 @@ ${docSentence(cfg, ref => `${ref} を必要に応じて読み、`)}各指摘を�
   const prBody = `Closes #${n}
 
 ## 自動パイプライン
-- 実装: pi (${PI_PROVIDER}/${PI_MODEL})
-- 一次レビュー: Codex / 取捨選択・最終レビュー: ${CLAUDE_MODEL}
+- 実装: pi (${PI_PROVIDER}/${PI_MODEL}/${PI_EFFORT ?? "既定"})
+- 一次レビュー: Codex / 取捨選択・最終レビュー: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}
 
 ### 採用したレビュー指摘
 ${acceptedMd}

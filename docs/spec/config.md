@@ -28,20 +28,23 @@
 | `test.reportCommand` | string | `test.command` | 最終レビューに渡す詳細なテスト結果を取るコマンド |
 | `models.pi.provider` | string | `"opencode-go"` | pi のプロバイダ |
 | `models.pi.model` | string | `"deepseek-v4.1-flash"` | pi のモデル |
-| `models.claude` | string | `"claude-fable-5-1"` | 取捨選択と最終レビューの `claude -p --model` |
+| `models.pi.effort` | string? | なし | pi の thinking level。省略すると pi の設定（無ければ `medium`） |
+| `models.claude.model` | string | `"claude-fable-5-1"` | 取捨選択と最終レビューの `claude -p --model` |
+| `models.claude.effort` | string? | なし | 取捨選択と最終レビューの `claude -p --effort`。省略すると Claude Code の既定 |
 | `models.codex.model` | string? | なし | Codex 一次レビューのモデル。省略すると Codex CLI の既定（`~/.codex/config.toml`） |
-| `models.codex.reasoningEffort` | string? | なし | Codex 一次レビューの reasoning effort。省略すると Codex CLI の既定 |
+| `models.codex.effort` | string? | なし | Codex 一次レビューの reasoning effort。省略すると Codex CLI の既定 |
 | `limits.maxReviewRounds` | number | `3` | レビューの最大ラウンド数。1 以上 |
 | `limits.maxTestFixes` | number | `3` | 1 ラウンド内でテスト失敗を実装担当に戻す最大回数。0 以上 |
 | `noAutomergeLabel` | string | `"no-automerge"` | これが付いた issue は自動マージしない |
 
-- 入れ子（`docs`, `code`, `models.pi`, `models.codex`, `limits`）は指定したキーだけが既定値を上書きする
+- `models` は 3 ツールとも `model` と `effort` を持ち、pi だけ `provider` が加わる。`effort` は省略でき、省略するとそのツールの既定に従う（何も渡さない）。値はツールごとに語彙が違うため検証せずそのまま渡す
+- 入れ子（`docs`, `code`, `models.pi`, `models.claude`, `models.codex`, `limits`）は指定したキーだけが既定値を上書きする
 - `test` は入れ子の既定値を持たない。`test.command` が空ならエラー
 - 上の表に無いキーは無視も検証もされない（そのまま `Config` に混ざる）
 
 ## 環境変数
 
-`PI_PROVIDER` / `PI_MODEL` / `CLAUDE_MODEL` / `CODEX_MODEL` / `CODEX_REASONING_EFFORT` は設定ファイルより優先される。設定ファイルの値は環境変数が無いときの既定になる。
+`PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定ファイルより優先される。設定ファイルの値は環境変数が無いときの既定になる。
 
 ## 参照ドキュメントの案内文（`docRef`）
 

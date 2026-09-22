@@ -20,7 +20,7 @@ run のオプション:
   --fresh            保存済みのレビュー結果を使わず、レビューをやり直す
   --config <path>    設定ファイルを明示指定する（既定: ./loopi.config.json）
 
-環境変数 PI_PROVIDER / PI_MODEL / CLAUDE_MODEL は設定ファイルのモデル指定より優先されます。
+環境変数 PI_PROVIDER / PI_MODEL / PI_EFFORT / CLAUDE_MODEL / CLAUDE_EFFORT / CODEX_MODEL / CODEX_EFFORT は設定ファイルのモデル指定より優先されます。
 
 終了コード: 0=merged または pr_waiting / 2=escalated（人間の判断待ち） / 1=error`;
 

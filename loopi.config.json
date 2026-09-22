@@ -10,8 +10,8 @@
   },
   "models": {
     "pi": { "provider": "opencode-go", "model": "deepseek-v4.1-flash" },
-    "claude": "claude-fable-5-1",
-    "codex": { "reasoningEffort": "medium" }
+    "claude": { "model": "claude-fable-5-1" },
+    "codex": { "effort": "medium" }
   },
   "limits": { "maxReviewRounds": 3, "maxTestFixes": 3 },
   "noAutomergeLabel": "no-automerge"
