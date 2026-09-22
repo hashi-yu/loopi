@@ -17,6 +17,7 @@ issue 駆動の自動実装パイプライン（`README.md`）。loopi 自身の
 - `tests/` — `node --test` のテスト（TypeScript、`tsx` で実行）
 - `docs/spec/` — 正しい挙動の出典。README と食い違ったらこちらが正
 - `docs/adr/` — 決定済みの設計判断。指摘の却下根拠と、「これに反する変更は人間に回す」の判定に使う
+- `CONTEXT.md` — 用語集。issue、レビューの出力、PR コメントで使う語はこれに合わせる
 
 ## 言語・スタイル
 

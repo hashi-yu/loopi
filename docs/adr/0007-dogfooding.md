@@ -17,5 +17,5 @@ loopi の改善点（issue #1〜#6）は、対象リポジトリで実際に回�
 ## 結果
 
 - パイプラインは `origin/main` から作業するため、この設定は main に入って初めて効く
-- `claude -p` や `gh` を実際に呼ぶ部分は `npm test` で検証できない。そこだけを変える issue では、最終レビューの受け入れ条件が `missing` になり確認待ちになる。これは意図した挙動
+- `claude -p` や `gh` を実際に呼ぶ部分は `npm test` で検証できない。そこだけを変える issue では、条件に `（レビュー確認）` を付けてレビュー担当に読んで判定させる（→ 0008）。印が無ければ `missing` になり確認待ち
 - `npx github:hashi-yu/loopi` は GitHub の main を使う。`run.ts` を直した直後の確認は `node dist/cli.js` で行う
