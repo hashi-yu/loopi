@@ -13,6 +13,9 @@
     "claude": { "model": "claude-fable-5-1" },
     "codex": { "effort": "medium" }
   },
+  "profiles": {
+    "fast": { "claude": { "model": "claude-sonnet-5" }, "codex": { "effort": "low" } }
+  },
   "limits": { "maxReviewRounds": 3, "maxTestFixes": 3 },
   "noAutomergeLabel": "no-automerge"
 }

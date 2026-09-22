@@ -16,10 +16,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { createAgentSession, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
 import { Codex, type ModelReasoningEffort, type ThreadOptions } from "@openai/codex-sdk";
-import { type Config, docSentence, loadConfig } from "./config.js";
+import { type Config, applyProfile, docSentence, loadConfig } from "./config.js";
 import { classifyExit } from "./exit.js";
 
-export type RunOptions = { issue: string; noMerge: boolean; fresh: boolean; config?: string };
+export type RunOptions = { issue: string; noMerge: boolean; fresh: boolean; config?: string; profile?: string };
 
 /** pi の thinking level。SDK が型を再輸出していないため、指定の型から取り出す */
 type ThinkingLevel = NonNullable<NonNullable<Parameters<typeof createAgentSession>[0]>["thinkingLevel"]>;
@@ -32,7 +32,7 @@ export async function run(opts: RunOptions): Promise<never> {
   const repo = process.cwd();
   let cfg: Config;
   try {
-    cfg = loadConfig(repo, opts.config);
+    cfg = applyProfile(loadConfig(repo, opts.config), opts.profile);
   } catch (e: any) {
     console.error(e.message);
     process.exit(1);
@@ -171,7 +171,7 @@ export async function run(opts: RunOptions): Promise<never> {
   // ───────── 1. 準備 ─────────
   fs.appendFileSync(LOG, `\n\n################ 実行開始 ${new Date().toISOString()} ################\n`);
   setStatus("running");
-  log(`issue #${n} 開始（pi: ${PI_PROVIDER}/${PI_MODEL}/${PI_EFFORT ?? "既定"}, claude: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}, codex: ${CODEX_MODEL ?? "既定"}/${CODEX_EFFORT ?? "既定"}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
+  log(`issue #${n} 開始（pi: ${PI_PROVIDER}/${PI_MODEL}/${PI_EFFORT ?? "既定"}, claude: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}, codex: ${CODEX_MODEL ?? "既定"}/${CODEX_EFFORT ?? "既定"}${opts.profile ? `, profile: ${opts.profile}` : ""}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
 
   const issueJson = JSON.parse(must(`gh issue view ${n} --json number,title,body,labels,state`));
   if (issueJson.state !== "OPEN") fail(`issue #${n} は ${issueJson.state} です`);
@@ -377,7 +377,7 @@ ${docSentence(cfg, ref => `${ref} を必要に応じて読み、`)}各指摘を�
 
 ## 自動パイプライン
 - 実装: pi (${PI_PROVIDER}/${PI_MODEL}/${PI_EFFORT ?? "既定"})
-- 一次レビュー: Codex / 取捨選択・最終レビュー: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}
+- 一次レビュー: Codex (${CODEX_MODEL ?? "既定"}/${CODEX_EFFORT ?? "既定"}) / 取捨選択・最終レビュー: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}
 
 ### 採用したレビュー指摘
 ${acceptedMd}

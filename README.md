@@ -35,6 +35,7 @@ npx github:hashi-yu/loopi init
 npx github:hashi-yu/loopi run 12              # 実装からマージまで
 npx github:hashi-yu/loopi run 12 --no-merge   # PR 作成と最終レビューまで
 npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結果を捨ててやり直す
+npx github:hashi-yu/loopi run 12 --profile fast  # profiles の名前でモデル指定を選んで回す
 ```
 
 再実行すると成功済みの工程を飛ばす。作業フォルダに実装があれば実装をスキップし、前回の合格時から差分と issue が変わっていなければレビューもスキップする。作り直したいときは作業フォルダを消す。
@@ -63,6 +64,9 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
     "claude": { "model": "claude-fable-5-1", "effort": "high" },
     "codex": { "model": "gpt-5.6-sol", "effort": "medium" }
   },
+  "profiles": {
+    "fast": { "claude": { "model": "claude-sonnet-5" }, "codex": { "effort": "low" } }
+  },
   "limits": { "maxReviewRounds": 3, "maxTestFixes": 3 },
   "noAutomergeLabel": "no-automerge"
 }
@@ -78,10 +82,11 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
 | `holdOnChange` | 変更が含まれると自動マージせず人間の確認に回すパス |
 | `test.command` | パイプラインが合否判定に使うコマンド（必須） |
 | `test.reportCommand` | 最終レビューに渡す詳細なテスト結果を取るコマンド |
+| `profiles` | 名前を付けた `models` の部分集合。`--profile <名前>` で選び、書いたキーだけが `models` を上書きする（任意） |
 | `limits` | レビューの最大ラウンド数と、1ラウンド内でテスト失敗を実装担当に戻す最大回数 |
 | `noAutomergeLabel` | これが付いた issue は自動マージしない |
 
-環境変数 `PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定より優先される。
+環境変数 `PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定より優先される。優先順位は 環境変数 > プロファイル > `models`。
 
 ## 自動マージを止める条件
 
