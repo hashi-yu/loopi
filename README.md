@@ -110,7 +110,7 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
 
 ```bash
 npm install
-npm run typecheck
+npm test          # tsc --noEmit + node --test（tests/*.test.ts）
 npm run build     # 手元で試す用。コミットするのは src/ だけ
 ```
 
@@ -119,3 +119,17 @@ npm run build     # 手元で試す用。コミットするのは src/ だけ
 ```bash
 node /path/to/loopi/dist/cli.js run 12
 ```
+
+### loopi 自身を loopi で開発する（dogfooding）
+
+このリポジトリには自分自身を対象にした `loopi.config.json` と `.claude/skills/loopi-run/` が入っている。issue を `.github/ISSUE_TEMPLATE/task.md` の型（背景・提案・受け入れ条件・触ってよいファイル・スコープ外）で書いてから:
+
+```bash
+npx github:hashi-yu/loopi run 12      # GitHub の main にある loopi で、この repo の issue #12 を実装する
+node dist/cli.js run 12               # 手元でビルドした loopi を使う（run.ts を直した直後の確認など）
+```
+
+- 作業フォルダは `../wt-issue-12`。`test.command` が `npm ci && npm test` なので、作業フォルダに `node_modules` が無くても動く
+- `README.md` / `package.json` / `loopi.config.json` を変更した PR は自動マージせず確認待ちになる（`holdOnChange`）
+- `AGENTS.md` / `.github/` / `.claude/` は保護パス。実装担当が触ると停止する
+- `npx github:...` は npm のキャッシュを使うため、マージしたばかりの変更を使いたいときは `npx --yes github:hashi-yu/loopi#main` のようにコミット指定を付けるか `node dist/cli.js` を使う
