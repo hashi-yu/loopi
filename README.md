@@ -60,7 +60,8 @@ npx github:hashi-yu/loopi run 12 --fresh      # 保存済みのレビュー結�
   },
   "models": {
     "pi": { "provider": "opencode-go", "model": "deepseek-v4.1-flash" },
-    "claude": "claude-fable-5-1"
+    "claude": "claude-fable-5-1",
+    "codex": { "reasoningEffort": "medium" }
   },
   "limits": { "maxReviewRounds": 3, "maxTestFixes": 3 },
   "noAutomergeLabel": "no-automerge"
