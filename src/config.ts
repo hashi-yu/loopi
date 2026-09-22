@@ -30,9 +30,21 @@ export type Config = {
     /** Codex 一次レビューの指定。省略したキーは Codex CLI の既定に従う */
     codex: { model?: string; effort?: string };
   };
+  /**
+   * モデル指定（`models`）の部分集合に付けた名前。`--profile` で 1 つ選び、
+   * 書いたキーだけが `models` を上書きする。`models` 以外のキーは持たない
+   */
+  profiles: Record<string, ModelProfile>;
   limits: { maxReviewRounds: number; maxTestFixes: number };
   /** これが付いた issue は自動マージしない */
   noAutomergeLabel: string;
+};
+
+/** `models` と同じ形の部分集合。書いたツール・キーだけが適用される */
+export type ModelProfile = {
+  pi?: Partial<Config["models"]["pi"]>;
+  claude?: Partial<Config["models"]["claude"]>;
+  codex?: Partial<Config["models"]["codex"]>;
 };
 
 export const CONFIG_FILENAME = "loopi.config.json";
@@ -50,6 +62,7 @@ const DEFAULTS = {
     claude: { model: "claude-fable-5-1" },
     codex: {} as { model?: string; effort?: string },
   },
+  profiles: {} as Record<string, ModelProfile>,
   limits: { maxReviewRounds: 3, maxTestFixes: 3 },
   noAutomergeLabel: "no-automerge",
 };
@@ -84,6 +97,7 @@ export function loadConfig(repo: string, explicit?: string): Config {
       claude: { ...DEFAULTS.models.claude, ...(raw.models?.claude ?? {}) },
       codex: { ...DEFAULTS.models.codex, ...(raw.models?.codex ?? {}) },
     },
+    profiles: raw.profiles ?? {},
     limits: { ...DEFAULTS.limits, ...(raw.limits ?? {}) },
     test: raw.test ?? {},
   };
@@ -94,6 +108,32 @@ export function loadConfig(repo: string, explicit?: string): Config {
   if (cfg.limits.maxTestFixes < 0) throw new Error(`${file} の limits.maxTestFixes は 0 以上にしてください`);
 
   return cfg;
+}
+
+/**
+ * `profiles` から名前で選んだプロファイルを `models` に適用する。
+ * 名前が無ければ設定をそのまま返す。無い名前なら、指定した名前と利用できる名前を並べて投げる。
+ */
+export function applyProfile(cfg: Config, name?: string): Config {
+  if (!name) return cfg;
+  const profile = Object.hasOwn(cfg.profiles, name) ? cfg.profiles[name] : undefined;
+  if (!profile) {
+    const available = Object.keys(cfg.profiles);
+    throw new Error(
+      `プロファイルが見つかりません: ${name}\n` +
+        (available.length
+          ? `利用できるプロファイル: ${available.join(", ")}`
+          : `利用できるプロファイルがありません（${CONFIG_FILENAME} の profiles に追加してください）`),
+    );
+  }
+  return {
+    ...cfg,
+    models: {
+      pi: { ...cfg.models.pi, ...(profile.pi ?? {}) },
+      claude: { ...cfg.models.claude, ...(profile.claude ?? {}) },
+      codex: { ...cfg.models.codex, ...(profile.codex ?? {}) },
+    },
+  };
 }
 
 /**

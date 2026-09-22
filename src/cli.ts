@@ -1,6 +1,6 @@
 // loopi: issue 駆動の自動実装パイプライン
 //
-//   loopi run <issue番号> [--no-merge] [--fresh] [--config <path>]
+//   loopi run <issue番号> [--no-merge] [--fresh] [--profile <名前>] [--config <path>]
 //   loopi init [--force]
 
 import fs from "node:fs";
@@ -18,6 +18,7 @@ const USAGE = `loopi — issue 駆動の自動実装パイプライン
 run のオプション:
   --no-merge         PR 作成と最終レビューまでで止める
   --fresh            保存済みのレビュー結果を使わず、レビューをやり直す
+  --profile <名前>   設定の profiles から名前で選んだモデル指定を適用する
   --config <path>    設定ファイルを明示指定する（既定: ./loopi.config.json）
 
 環境変数 PI_PROVIDER / PI_MODEL / PI_EFFORT / CLAUDE_MODEL / CLAUDE_EFFORT / CODEX_MODEL / CODEX_EFFORT は設定ファイルのモデル指定より優先されます。
@@ -58,5 +59,6 @@ await run({
   issue,
   noMerge: argv.includes("--no-merge"),
   fresh: argv.includes("--fresh"),
+  profile: flagValue(argv, "--profile"),
   config: flagValue(argv, "--config"),
 });

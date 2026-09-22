@@ -33,6 +33,7 @@
 | `models.claude.effort` | string? | なし | 取捨選択と最終レビューの `claude -p --effort`。省略すると Claude Code の既定 |
 | `models.codex.model` | string? | なし | Codex 一次レビューのモデル。省略すると Codex CLI の既定（`~/.codex/config.toml`） |
 | `models.codex.effort` | string? | なし | Codex 一次レビューの reasoning effort。省略すると Codex CLI の既定 |
+| `profiles` | object | `{}` | モデル指定（`models`）の部分集合に付けた名前。`--profile <名前>` で 1 つ選ぶ |
 | `limits.maxReviewRounds` | number | `3` | レビューの最大ラウンド数。1 以上 |
 | `limits.maxTestFixes` | number | `3` | 1 ラウンド内でテスト失敗を実装担当に戻す最大回数。0 以上 |
 | `noAutomergeLabel` | string | `"no-automerge"` | これが付いた issue は自動マージしない |
@@ -42,9 +43,24 @@
 - `test` は入れ子の既定値を持たない。`test.command` が空ならエラー
 - 上の表に無いキーは無視も検証もされない（そのまま `Config` に混ざる）
 
+## プロファイル
+
+`profiles` は `models` と同じ形の部分集合に名前を付けたもの。`loopi run <番号> --profile <名前>` で 1 つ選ぶ。
+
+```json
+"profiles": {
+  "fast": { "claude": { "model": "claude-sonnet-5" }, "codex": { "effort": "low" } }
+}
+```
+
+- 書いたキーだけが `models` を上書きする（ツール単位でさらにキー単位）。上の例では `claude.model` と `codex.effort` だけが変わり、`claude.effort` と pi の指定は `models` のまま
+- プロファイルの `models` 以外のキー（例: `limits`）は無視する
+- 指定しなければ `models` がそのまま効く。既定のプロファイルは無い
+- 無い名前を指定するとエラー。メッセージに指定した名前と利用できるプロファイル名の一覧を出す
+
 ## 環境変数
 
-`PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定ファイルより優先される。設定ファイルの値は環境変数が無いときの既定になる。
+`PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定ファイルより優先される。設定ファイルの値は環境変数が無いときの既定になる。優先順位は 環境変数 > プロファイル > `models`。
 
 ## 参照ドキュメントの案内文（`docRef`）
 

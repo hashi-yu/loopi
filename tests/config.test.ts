@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { CONFIG_FILENAME, docRef, docSentence, loadConfig } from "../src/config.js";
+import { CONFIG_FILENAME, applyProfile, docRef, docSentence, loadConfig } from "../src/config.js";
 
 function repoWith(config: unknown): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "loopi-test-"));
@@ -24,6 +24,7 @@ test("最小の設定に既定値が補われる", () => {
   assert.equal(cfg.noAutomergeLabel, "no-automerge");
   assert.equal(typeof cfg.models.pi.provider, "string");
   assert.equal(cfg.models.claude.model, "claude-fable-5-1");
+  assert.deepEqual(cfg.profiles, {});
 });
 
 test("test.reportCommand を省略すると test.command が使われる", () => {
@@ -120,4 +121,53 @@ test("docSentence は参照ドキュメントが無ければ空文字", () => {
   const base = { test: { command: "x" } };
   assert.equal(docSentence(loadConfig(repoWith(base)), ref => `まず ${ref} を読む`), "");
   assert.equal(docSentence(loadConfig(repoWith({ ...base, docs: { agents: "AGENTS.md" } })), ref => `まず ${ref} を読む`), "まず AGENTS.md を読む");
+});
+
+test("applyProfile は名前が無ければ設定をそのまま返し、profiles を省略しても動く", () => {
+  const cfg = loadConfig(repoWith({ test: { command: "x" } }));
+  const out = applyProfile(cfg);
+  assert.deepEqual(out, cfg);
+  assert.deepEqual(out.profiles, {});
+  assert.equal(out.models.claude.model, "claude-fable-5-1");
+});
+
+test("applyProfile は存在しない名前で、名前と利用できる一覧を含むエラーを投げる", () => {
+  const cfg = loadConfig(repoWith({
+    test: { command: "x" },
+    profiles: { fast: { codex: { effort: "low" } }, slow: {} },
+  }));
+  assert.throws(
+    () => applyProfile(cfg, "unknown"),
+    (e: Error) => e.message.includes("unknown") && e.message.includes("fast") && e.message.includes("slow"),
+  );
+  // プロトタイプのキー名でも「無い名前」として扱う
+  assert.throws(() => applyProfile(cfg, "constructor"), /constructor/);
+});
+
+test("applyProfile はプロファイルに書いたツールとキーだけを models から上書きする", () => {
+  const cfg = loadConfig(repoWith({
+    test: { command: "x" },
+    models: {
+      pi: { provider: "p", model: "pm", effort: "high" },
+      claude: { model: "cm", effort: "high" },
+      codex: { model: "xm", effort: "high" },
+    },
+    profiles: { fast: { claude: { effort: "low" }, codex: { model: "x2" } } },
+  }));
+  const out = applyProfile(cfg, "fast");
+  assert.deepEqual(out.models.pi, { provider: "p", model: "pm", effort: "high" }); // 書いていないツールはそのまま
+  assert.deepEqual(out.models.claude, { model: "cm", effort: "low" }); // 書いたキーだけ
+  assert.deepEqual(out.models.codex, { model: "x2", effort: "high" });
+});
+
+test("applyProfile はプロファイルの models 以外のキーを無視する", () => {
+  const cfg = loadConfig(repoWith({
+    test: { command: "x" },
+    limits: { maxReviewRounds: 3 },
+    profiles: { fast: { limits: { maxReviewRounds: 9 }, code: { testDir: "t/" }, models: { pi: { model: "pm" } } } },
+  }));
+  const out = applyProfile(cfg, "fast");
+  assert.equal(out.limits.maxReviewRounds, 3);
+  assert.equal(out.code.testDir, undefined);
+  assert.equal(out.models.pi.model, cfg.models.pi.model);
 });
