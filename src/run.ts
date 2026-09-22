@@ -90,6 +90,10 @@ export async function run(opts: RunOptions): Promise<never> {
     setStatus("error", { reason: msg });
     process.exit(1);
   }
+  // SDK（pi / Codex）が投げた例外から、reason に残すメッセージを取り出す
+  function errorMessage(e: any): string {
+    return e?.message ?? String(e);
+  }
   const INTERRUPTED_REASON = "外部から停止された。再実行すると成功済みの工程を飛ばして続きから進む";
   function interrupt(): never {
     log("外部から停止されました");
@@ -209,7 +213,11 @@ ${ISSUE}`;
       // 新しいセッションには役割と issue を先に伝える
       prompt = msg.startsWith(PI_CONTEXT) ? msg : `${PI_CONTEXT}\n\n---\nこの issue の実装は作業フォルダに既にあります。次の対応をしてください:\n${msg}`;
     }
-    await session.prompt(prompt);
+    try {
+      await session.prompt(prompt);
+    } catch (e: any) {
+      fail(`pi が失敗しました: ${errorMessage(e)}`);
+    }
   }
 
   const existingChanges = changedFiles();
@@ -284,7 +292,9 @@ ${ISSUE}`;
 
     // Codex レビュー
     log(`ラウンド${round}: Codex レビュー`);
-    const turn = await codex.startThread({ workingDirectory: wt }).run(
+    let turn: any;
+    try {
+      turn = await codex.startThread({ workingDirectory: wt }).run(
 `あなたはコードレビュアーです。ファイルは一切変更しないでください。
 ${docSentence(cfg, ref => `${ref} を読んだうえで、\n`)}下の差分をレビューし、重大な問題だけを issues に挙げてください:
 - バグ、受け入れ条件の未達、仕様・設計判断（spec / ADR）違反、テスト不足、セキュリティ
@@ -295,6 +305,9 @@ ${ISSUE}
 # 差分
 ${diff.slice(0, 60000)}`,
       { outputSchema: codexSchema });
+    } catch (e: any) {
+      fail(`Codex レビューが失敗しました: ${errorMessage(e)}`);
+    }
     const codexIssues = JSON.parse(turn.finalResponse).issues as any[];
     write(JSON.stringify(codexIssues, null, 2) + "\n");
     if (stagedDiff() !== diff) escalate("Codex レビュー中にファイルが変更されました");
