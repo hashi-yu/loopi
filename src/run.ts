@@ -38,13 +38,15 @@ export async function run(opts: RunOptions): Promise<never> {
     process.exit(1);
   }
 
-  const PI_PROVIDER = process.env.PI_PROVIDER ?? cfg.models.pi.provider;
-  const PI_MODEL = process.env.PI_MODEL ?? cfg.models.pi.model;
-  const PI_EFFORT = process.env.PI_EFFORT ?? cfg.models.pi.effort;
-  const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? cfg.models.claude.model;
-  const CLAUDE_EFFORT = process.env.CLAUDE_EFFORT ?? cfg.models.claude.effort;
-  const CODEX_MODEL = process.env.CODEX_MODEL ?? cfg.models.codex.model;
-  const CODEX_EFFORT = process.env.CODEX_EFFORT ?? cfg.models.codex.effort;
+  // モデル指定の上書きは loopi の環境変数（すべて LOOPI_ 接頭辞）だけで行う。
+  // 接頭辞なしの PI_* / CLAUDE_* / CODEX_* は他ツールと衝突するため読まない
+  const piProvider = process.env.LOOPI_PI_PROVIDER ?? cfg.models.pi.provider;
+  const piModel = process.env.LOOPI_PI_MODEL ?? cfg.models.pi.model;
+  const piEffort = process.env.LOOPI_PI_EFFORT ?? cfg.models.pi.effort;
+  const claudeModel = process.env.LOOPI_CLAUDE_MODEL ?? cfg.models.claude.model;
+  const claudeEffort = process.env.LOOPI_CLAUDE_EFFORT ?? cfg.models.claude.effort;
+  const codexModel = process.env.LOOPI_CODEX_MODEL ?? cfg.models.codex.model;
+  const codexEffort = process.env.LOOPI_CODEX_EFFORT ?? cfg.models.codex.effort;
   const MAX_REVIEW_ROUNDS = cfg.limits.maxReviewRounds;   // Codex レビュー → 修正 の最大回数
   const MAX_TEST_FIXES = cfg.limits.maxTestFixes;         // 1ラウンド内でテスト失敗を pi に戻す最大回数
   const TEST_CMD = cfg.test.command;
@@ -151,8 +153,8 @@ export async function run(opts: RunOptions): Promise<never> {
   function askClaude(prompt: string, input: string, schema: object) {
     const r = spawnSync("claude", [
       "-p", prompt,
-      "--model", CLAUDE_MODEL,
-      ...(CLAUDE_EFFORT ? ["--effort", CLAUDE_EFFORT] : []),
+      "--model", claudeModel,
+      ...(claudeEffort ? ["--effort", claudeEffort] : []),
       "--output-format", "json",
       "--json-schema", JSON.stringify(schema),
       "--permission-mode", "dontAsk",
@@ -171,7 +173,7 @@ export async function run(opts: RunOptions): Promise<never> {
   // ───────── 1. 準備 ─────────
   fs.appendFileSync(LOG, `\n\n################ 実行開始 ${new Date().toISOString()} ################\n`);
   setStatus("running");
-  log(`issue #${n} 開始（pi: ${PI_PROVIDER}/${PI_MODEL}/${PI_EFFORT ?? "既定"}, claude: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}, codex: ${CODEX_MODEL ?? "既定"}/${CODEX_EFFORT ?? "既定"}${opts.profile ? `, profile: ${opts.profile}` : ""}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
+  log(`issue #${n} 開始（pi: ${piProvider}/${piModel}/${piEffort ?? "既定"}, claude: ${claudeModel}/${claudeEffort ?? "既定"}, codex: ${codexModel ?? "既定"}/${codexEffort ?? "既定"}${opts.profile ? `, profile: ${opts.profile}` : ""}, base: ${BASE}${NO_MERGE ? ", --no-merge" : ""}${FRESH ? ", --fresh" : ""}）`);
 
   const issueJson = JSON.parse(must(`gh issue view ${n} --json number,title,body,labels,state`));
   if (issueJson.state !== "OPEN") fail(`issue #${n} は ${issueJson.state} です`);
@@ -212,15 +214,15 @@ ${ISSUE}`;
     let prompt = msg;
     if (!session) {
       const modelRuntime = await ModelRuntime.create();
-      const model = modelRuntime.getModel(PI_PROVIDER, PI_MODEL);
-      if (!model) fail(`モデルが見つかりません: ${PI_PROVIDER}/${PI_MODEL}`);
+      const model = modelRuntime.getModel(piProvider, piModel);
+      if (!model) fail(`モデルが見つかりません: ${piProvider}/${piModel}`);
       ({ session } = await createAgentSession({
         cwd: wt,
         sessionManager: SessionManager.inMemory(wt),
         modelRuntime,
         model,
         // effort は値があるときだけ渡す。無ければ pi の設定（無ければ medium）に従う
-        ...(PI_EFFORT ? { thinkingLevel: PI_EFFORT as ThinkingLevel } : {}),
+        ...(piEffort ? { thinkingLevel: piEffort as ThinkingLevel } : {}),
       }));
       session.subscribe((ev: any) => {
         if (ev.type === "message_update" && ev.assistantMessageEvent.type === "text_delta") write(ev.assistantMessageEvent.delta);
@@ -261,8 +263,8 @@ ${ISSUE}`;
   const codex = new Codex();
   // 指定されたキーだけを渡す。無いキーは Codex CLI の既定（~/.codex/config.toml）に従う
   const codexThreadOptions: ThreadOptions = { workingDirectory: wt };
-  if (CODEX_MODEL) codexThreadOptions.model = CODEX_MODEL;
-  if (CODEX_EFFORT) codexThreadOptions.modelReasoningEffort = CODEX_EFFORT as ModelReasoningEffort;
+  if (codexModel) codexThreadOptions.model = codexModel;
+  if (codexEffort) codexThreadOptions.modelReasoningEffort = codexEffort as ModelReasoningEffort;
   const codexSchema = {
     type: "object",
     properties: {
@@ -376,8 +378,8 @@ ${docSentence(cfg, ref => `${ref} を必要に応じて読み、`)}各指摘を�
   const prBody = `Closes #${n}
 
 ## 自動パイプライン
-- 実装: pi (${PI_PROVIDER}/${PI_MODEL}/${PI_EFFORT ?? "既定"})
-- 一次レビュー: Codex (${CODEX_MODEL ?? "既定"}/${CODEX_EFFORT ?? "既定"}) / 取捨選択・最終レビュー: ${CLAUDE_MODEL}/${CLAUDE_EFFORT ?? "既定"}
+- 実装: pi (${piProvider}/${piModel}/${piEffort ?? "既定"})
+- 一次レビュー: Codex (${codexModel ?? "既定"}/${codexEffort ?? "既定"}) / 取捨選択・最終レビュー: ${claudeModel}/${claudeEffort ?? "既定"}
 
 ### 採用したレビュー指摘
 ${acceptedMd}

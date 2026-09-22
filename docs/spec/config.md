@@ -60,7 +60,7 @@
 
 ## 環境変数
 
-`PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定ファイルより優先される。設定ファイルの値は環境変数が無いときの既定になる。優先順位は 環境変数 > プロファイル > `models`。
+loopi の環境変数はすべて `LOOPI_` で始まる。設定ファイルのモデル指定を上書きできるのは `LOOPI_PI_PROVIDER` / `LOOPI_PI_MODEL` / `LOOPI_PI_EFFORT` / `LOOPI_CLAUDE_MODEL` / `LOOPI_CLAUDE_EFFORT` / `LOOPI_CODEX_MODEL` / `LOOPI_CODEX_EFFORT` の 7 つで、設定ファイルより優先される。接頭辞なしの `PI_*` / `CLAUDE_*` / `CODEX_*` は他ツールと衝突するため読まない。設定ファイルの値は環境変数が無いときの既定になる。優先順位は 環境変数 > プロファイル > `models`。
 
 ## 参照ドキュメントの案内文（`docRef`）
 
