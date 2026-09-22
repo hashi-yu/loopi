@@ -8,7 +8,7 @@
 //   - 前回の最終レビューから差分と issue が変わっていない → 最終レビューをスキップ
 //
 // 結果: logs/issue-<番号>.log（全ログ・追記） / .status.json（最終状態） / .state.json（再開用）
-// 終了コード: 0=merged or pr_waiting / 2=escalated（人間の判断待ち） / 1=error
+// 終了コード: 0=merged or pr_waiting / 3=interrupted（外部から停止） / 2=escalated（人間の判断待ち） / 1=error
 
 import { execSync, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
@@ -17,6 +17,7 @@ import path from "node:path";
 import { createAgentSession, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
 import { Codex } from "@openai/codex-sdk";
 import { type Config, docSentence, loadConfig } from "./config.js";
+import { classifyExit } from "./exit.js";
 
 export type RunOptions = { issue: string; noMerge: boolean; fresh: boolean; config?: string };
 
@@ -70,12 +71,12 @@ export async function run(opts: RunOptions): Promise<never> {
 
   function runCmd(cmd: string, cwd = repo) {
     try {
-      return { ok: true, out: execSync(cmd, { cwd, encoding: "utf8", stdio: "pipe", env: NON_INTERACTIVE, maxBuffer: 64 * 1024 * 1024 }) };
-    } catch (e: any) { return { ok: false, out: `${e.stdout ?? ""}${e.stderr ?? ""}` }; }
+      return { ok: true, out: execSync(cmd, { cwd, encoding: "utf8", stdio: "pipe", env: NON_INTERACTIVE, maxBuffer: 64 * 1024 * 1024 }), status: 0, signal: null };
+    } catch (e: any) { return { ok: false, out: `${e.stdout ?? ""}${e.stderr ?? ""}`, status: e.status ?? null, signal: e.signal ?? null }; }
   }
   function must(cmd: string, cwd = repo) {
     const r = runCmd(cmd, cwd);
-    if (!r.ok) fail(`コマンド失敗: ${cmd}\n${r.out}`);
+    if (!r.ok) failOrInterrupt(r.status, r.signal, `コマンド失敗: ${cmd}\n${r.out}`);
     return r.out;
   }
   const sha = (text: string) => crypto.createHash("sha256").update(text).digest("hex").slice(0, 16);
@@ -89,6 +90,21 @@ export async function run(opts: RunOptions): Promise<never> {
     setStatus("error", { reason: msg });
     process.exit(1);
   }
+  const INTERRUPTED_REASON = "外部から停止された。再実行すると成功済みの工程を飛ばして続きから進む";
+  function interrupt(): never {
+    log("外部から停止されました");
+    setStatus("interrupted", { reason: INTERRUPTED_REASON });
+    process.exit(3);
+  }
+  // 子プロセスが外部から止められた場合は error ではなく interrupted として残す
+  function failOrInterrupt(status: number | null, signal: string | null, msg: string): never {
+    if (classifyExit({ status, signal }) === "interrupted") interrupt();
+    fail(msg);
+  }
+  // execSync / spawnSync の実行中はこのハンドラは動かない（子の終了後に走る）。
+  // Ctrl-C は同じプロセスグループの子にも届くので、子側の 130 / SIGINT を classifyExit が拾う。
+  process.on("SIGINT", interrupt);
+  process.on("SIGTERM", interrupt);
   function escalate(reason: string, detail = ""): never {
     log(`人間の判断が必要: ${reason}`);
     write(detail + "\n");
@@ -121,7 +137,7 @@ export async function run(opts: RunOptions): Promise<never> {
       "--permission-mode", "dontAsk",
       "--allowedTools", "Read,Grep,Glob",
     ], { cwd: wt, input, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, env: NON_INTERACTIVE });
-    if (r.status !== 0) fail(`claude -p が失敗しました (exit ${r.status})\n${r.stderr}\n${r.stdout?.slice(-2000)}`);
+    if (r.status !== 0) failOrInterrupt(r.status, r.signal, `claude -p が失敗しました (exit ${r.status})\n${r.stderr}\n${r.stdout?.slice(-2000)}`);
     let res: any;
     try { res = JSON.parse(r.stdout); } catch { fail(`claude -p の出力を JSON として読めません:\n${r.stdout.slice(-2000)}`); }
     // Claude Code 2.1.x は --output-format json でメッセージ配列を返す。最後の type=result 要素が結果
@@ -202,6 +218,7 @@ ${ISSUE}`;
       const t = runCmd(TEST_CMD, wt);
       write(t.out.slice(-1500) + "\n");
       if (t.ok) return;
+      if (classifyExit({ status: t.status, signal: t.signal }) === "interrupted") interrupt();
       if (i === MAX_TEST_FIXES) escalate(`テストが ${MAX_TEST_FIXES} 回の修正で通りませんでした`, "```\n" + t.out.slice(-3000) + "\n```");
       log(`ラウンド${round}: テスト失敗 → pi に修正依頼`);
       await askPi(`テストが失敗しています。原因を調べて修正してください:\n${t.out.slice(-4000)}`);
@@ -376,6 +393,7 @@ ${rejectedMd}`;
     log("テスト結果の詳細を取得");
     const report = runCmd(TEST_REPORT_CMD, wt);
     write(report.out.slice(-3000) + "\n");
+    if (!report.ok && classifyExit({ status: report.status, signal: report.signal }) === "interrupted") interrupt();
     if (!report.ok) escalate("最終レビュー前の詳細テストが失敗しました", "```\n" + report.out.slice(-3000) + "\n```");
 
     finalReview = askClaude(
@@ -425,6 +443,7 @@ summary は日本語で3行以内。`,
   const merge = runCmd(`git merge --no-edit ${ORIGIN_BASE}`, wt);
   if (!merge.ok) { runCmd("git merge --abort", wt); escalate(`${BASE} との競合があります`, merge.out.slice(-2000)); }
   const t = runCmd(TEST_CMD, wt);
+  if (!t.ok && classifyExit({ status: t.status, signal: t.signal }) === "interrupted") interrupt();
   if (!t.ok) escalate(`${BASE} 取り込み後にテストが失敗しました`, "```\n" + t.out.slice(-3000) + "\n```");
   must(`git push origin ${branch}`, wt);
 
