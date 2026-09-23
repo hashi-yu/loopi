@@ -86,7 +86,7 @@ npx github:hashi-yu/loopi run 12 --profile fast  # profiles の名前でモデ�
 | `limits` | レビューの最大ラウンド数と、1ラウンド内でテスト失敗を実装担当に戻す最大回数 |
 | `noAutomergeLabel` | これが付いた issue は自動マージしない |
 
-環境変数 `PI_PROVIDER` / `PI_MODEL` / `PI_EFFORT` / `CLAUDE_MODEL` / `CLAUDE_EFFORT` / `CODEX_MODEL` / `CODEX_EFFORT` は設定より優先される。優先順位は 環境変数 > プロファイル > `models`。
+loopi の環境変数はすべて `LOOPI_` で始まる。モデル指定を上書きする `LOOPI_PI_PROVIDER` / `LOOPI_PI_MODEL` / `LOOPI_PI_EFFORT` / `LOOPI_CLAUDE_MODEL` / `LOOPI_CLAUDE_EFFORT` / `LOOPI_CODEX_MODEL` / `LOOPI_CODEX_EFFORT` は設定より優先される。優先順位は 環境変数 > プロファイル > `models`。
 
 ## 自動マージを止める条件
 

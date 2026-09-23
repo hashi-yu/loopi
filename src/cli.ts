@@ -21,7 +21,7 @@ run のオプション:
   --profile <名前>   設定の profiles から名前で選んだモデル指定を適用する
   --config <path>    設定ファイルを明示指定する（既定: ./loopi.config.json）
 
-環境変数 PI_PROVIDER / PI_MODEL / PI_EFFORT / CLAUDE_MODEL / CLAUDE_EFFORT / CODEX_MODEL / CODEX_EFFORT は設定ファイルのモデル指定より優先されます。
+loopi の環境変数はすべて LOOPI_ で始まる。LOOPI_PI_PROVIDER / LOOPI_PI_MODEL / LOOPI_PI_EFFORT / LOOPI_CLAUDE_MODEL / LOOPI_CLAUDE_EFFORT / LOOPI_CODEX_MODEL / LOOPI_CODEX_EFFORT は設定ファイルのモデル指定より優先されます。
 
 終了コード: 0=merged または pr_waiting / 2=escalated（人間の判断待ち） / 1=error`;
 
