@@ -26,14 +26,35 @@ function detectBaseBranch(repo: string): string {
   } catch { return "main"; }
 }
 
+/**
+ * package.json の scripts から npm のテストコマンドを推測する。
+ * scripts が読めなかった（undefined）ときは今までどおり `npm test`。
+ * scripts.test が無ければ失敗が確実な `npm test` は推測せず空にし、
+ * `typecheck`・`lint`・`test:*` を候補として返す（並びは scripts の順）
+ */
+export function detectNpmTest(scripts: Record<string, string> | undefined): { command: string; candidates: string[] } {
+  if (!scripts || scripts.test) return { command: "npm test", candidates: [] };
+  const candidates = Object.keys(scripts).filter(k => k === "typecheck" || k === "lint" || k.startsWith("test:"));
+  return { command: "", candidates };
+}
+
 /** リポジトリの中身からテストコマンドを推測する。外したら人が直せばよい */
-function detectTest(repo: string): { command: string; reportCommand: string; testDir?: string } {
+export function detectTest(repo: string): { command: string; reportCommand: string; testDir?: string; candidates?: string[] } {
   const has = (p: string) => fs.existsSync(path.join(repo, p));
   if (has("pyproject.toml") || has("pytest.ini") || has("tests") && has("setup.py"))
     return { command: "python -m pytest -q", reportCommand: "python -m pytest -v --tb=short", testDir: has("tests") ? "tests/" : undefined };
   if (has("go.mod")) return { command: "go test ./...", reportCommand: "go test -v ./..." };
   if (has("Cargo.toml")) return { command: "cargo test -q", reportCommand: "cargo test -- --nocapture" };
-  if (has("package.json")) return { command: "npm test", reportCommand: "npm test" };
+  if (has("package.json")) {
+    let scripts: Record<string, string> | undefined;
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(repo, "package.json"), "utf8"));
+      // scripts 自体が無い（または形が違う）ときは test が無いのと同じに扱う
+      scripts = pkg?.scripts && typeof pkg.scripts === "object" && !Array.isArray(pkg.scripts) ? pkg.scripts : {};
+    } catch { /* JSON として読めなければ今までどおり npm test と推測する */ }
+    const npm = detectNpmTest(scripts);
+    return { command: npm.command, reportCommand: npm.command, candidates: npm.candidates };
+  }
   if (has("tests")) return { command: "python -m pytest -q", reportCommand: "python -m pytest -v --tb=short", testDir: "tests/" };
   return { command: "", reportCommand: "" };
 }
@@ -101,7 +122,11 @@ export function init(opts: { force: boolean }): never {
     wrote.push(CONFIG_FILENAME);
     if (!test.command) suggestions.push({
       what: `${CONFIG_FILENAME} の test.command`,
-      why: "テストコマンドを推測できなかった。パイプラインはテストの合否で進むため、ここが空だと動かない。",
+      why: test.candidates?.length
+        ? `package.json に scripts.test が無い。scripts にある候補: ${test.candidates.join(", ")}。` +
+          `使うものを "${test.candidates.map(c => `npm run ${c}`).join(" && ")}" のように && でつないで書く。` +
+          "パイプラインはテストの合否で進むため、ここが空だと動かない。"
+        : "テストコマンドを推測できなかった。パイプラインはテストの合否で進むため、ここが空だと動かない。",
     });
   }
 
