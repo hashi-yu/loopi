@@ -14,5 +14,6 @@ loopi は agent-lab の自動実装パイプラインを切り出したもので
 | [0006](0006-do-not-commit-dist.md) | `dist/` はコミットせず `prepare` でビルドする |
 | [0007](0007-dogfooding.md) | loopi 自身を loopi で開発する |
 | [0008](0008-verification-method-declared-in-issue.md) | 受け入れ条件の検証方法は issue を書く人間が宣言する |
+| [0009](0009-diff-from-merge-base.md) | 差分は基準ブランチとの分岐点から測る |
 
 書き方: 状態 / 背景 / 決定 / 結果。1 ファイル 1 判断。覆すときは新しい ADR を書き、古い方の状態を「置き換え」にする。
