@@ -8,6 +8,7 @@
 - issue は `gh issue view` で読む。状態が `OPEN` でなければ `error`
 - 設定は `loopi.config.json`（[config.md](config.md)）。実行はリポジトリのルートで行い、設定はそのルートから読む（作業フォルダの設定は使わない）
 - 基準ブランチは `origin/<baseBranch>`。`git fetch origin` 後に存在しなければ `error`
+- 「差分」は、作業ブランチと `origin/<baseBranch>` の分岐点（`git merge-base HEAD origin/<baseBranch>`）から作業フォルダ（未コミットの変更を含む）までの変更を指す。実行中に fetch で `origin/<baseBranch>` が進んでも、基準ブランチ側だけで入った変更は差分に含まれない。分岐点は判定のたびに求めるので、7. の取り込み後は取り込んだ `origin/<baseBranch>` からの差分になる
 
 ## 作業場所
 
@@ -40,7 +41,7 @@
 
 ### 1. 実装（pi）
 
-- 作業フォルダに `origin/<baseBranch>` との差分が 1 ファイルでもあれば、初回実装をスキップする
+- 作業フォルダに `origin/<baseBranch>` との分岐点（merge-base）からの差分が 1 ファイルでもあれば、初回実装をスキップする
 - 無ければ pi に、役割・参照ドキュメント・テストの置き場・保護パス・issue 本文を渡して実装させる
 - pi のセッションは必要になった時点で起動する。スキップした場合、修正依頼が来るまで起動しない
 
@@ -98,7 +99,7 @@
 
 | 条件 | スキップするもの |
 |---|---|
-| 作業フォルダに基準ブランチとの差分がある | 1. 初回実装 |
+| 作業フォルダに基準ブランチとの分岐点からの差分がある | 1. 初回実装 |
 | `state.reviewPassedKey` が現在の差分と issue から計算したキーと一致 | 3. Codex レビューと取捨選択（保存済みの記録を使う） |
 | `state.finalReviewKey` が一致し、`finalReview` がある | 5. 最終レビュー（保存済みの結果を使う。PR コメントも書かない） |
 

@@ -136,13 +136,20 @@ export async function run(opts: RunOptions): Promise<never> {
     process.exit(2);
   }
 
+  // 差分の比較先は、作業ブランチと origin/<baseBranch> の分岐点（merge-base）。
+  // origin/<baseBranch> と直接比べると、実行中に fetch で進んだ分が「逆向きの変更」として混ざる。
+  // 工程 6 の取り込み後は分岐点が動くので、キャッシュせず呼ぶたびに求める
+  // （git 2.30 未満にも対応するため `git diff --merge-base` は使わない）
+  function diffBase() {
+    return must(`git merge-base HEAD ${ORIGIN_BASE}`, wt).trim();
+  }
   function changedFiles() {
     runCmd("git add -A", wt);
-    return must(`git diff --cached --name-only ${ORIGIN_BASE}`, wt).split("\n").filter(Boolean);
+    return must(`git diff --cached --name-only ${diffBase()}`, wt).split("\n").filter(Boolean);
   }
   function stagedDiff() {
     runCmd("git add -A", wt);
-    return must(`git diff --cached ${ORIGIN_BASE}`, wt);
+    return must(`git diff --cached ${diffBase()}`, wt);
   }
   function checkProtected() {
     if (PROTECTED.length === 0) return;

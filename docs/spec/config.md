@@ -15,7 +15,7 @@
 
 | キー | 型 | 既定値 | 意味 |
 |---|---|---|---|
-| `baseBranch` | string | `"main"` | 差分の基準・作業ブランチの起点・PR の base・マージ前の取り込み先 |
+| `baseBranch` | string | `"main"` | 差分の基準（分岐点を求める相手）・作業ブランチの起点・PR の base・マージ前の取り込み先 |
 | `branchPrefix` | string | `"issue-"` | 作業ブランチ名の接頭辞 |
 | `worktreeDir` | string | `".."` | 作業フォルダを作る場所（リポジトリからの相対パス） |
 | `docs.agents` | string? | なし | 共通ルールの文書。指定するとプロンプトに載る |
