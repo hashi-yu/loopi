@@ -108,7 +108,7 @@
 
 - pi: 作業フォルダ内でファイルを変更できる。`git commit` はしない指示を受ける
 - Codex: 作業フォルダで読み取り。ファイルを変更しない指示を受ける
-- Claude（取捨選択・最終レビュー）: `claude -p` を `--permission-mode dontAsk --allowedTools Read,Grep,Glob` で起動し、JSON Schema で構造化出力を受け取る。テストは実行しない（結果はパイプラインが渡す）
+- Claude（取捨選択・最終レビュー）: `claude -p` を `--permission-mode dontAsk --allowedTools Read,Grep,Glob` で起動し、JSON Schema で構造化出力を受け取る。テストは実行しない（結果はパイプラインが渡す）。`CLAUDE_EFFORT` / `CLAUDE_CODE_EFFORT_LEVEL` は子に渡さない（effort は `--effort` でだけ指定する）
 - git・gh は `GIT_TERMINAL_PROMPT=0`、`ssh -o BatchMode=yes` で対話を禁止する
 
 ## `escalated` 時の issue コメント

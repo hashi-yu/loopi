@@ -17,6 +17,7 @@ import path from "node:path";
 import { createAgentSession, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
 import { Codex, type ModelReasoningEffort, type ThreadOptions } from "@openai/codex-sdk";
 import { type Config, applyProfile, docSentence, loadConfig } from "./config.js";
+import { claudeChildEnv } from "./env.js";
 import { classifyExit } from "./exit.js";
 
 export type RunOptions = { issue: string; noMerge: boolean; fresh: boolean; config?: string; profile?: string };
@@ -150,6 +151,7 @@ export async function run(opts: RunOptions): Promise<never> {
   }
 
   // Claude Code をヘッドレスで呼び、JSON Schema に沿った結果を返す（読み取り専用）
+  // セッション由来の effort の環境変数は渡さない（effort は --effort でだけ指定する）
   function askClaude(prompt: string, input: string, schema: object) {
     const r = spawnSync("claude", [
       "-p", prompt,
@@ -159,7 +161,7 @@ export async function run(opts: RunOptions): Promise<never> {
       "--json-schema", JSON.stringify(schema),
       "--permission-mode", "dontAsk",
       "--allowedTools", "Read,Grep,Glob",
-    ], { cwd: wt, input, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, env: NON_INTERACTIVE });
+    ], { cwd: wt, input, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, env: claudeChildEnv(NON_INTERACTIVE) });
     if (r.status !== 0) failOrInterrupt(r.status, r.signal, `claude -p が失敗しました (exit ${r.status})\n${r.stderr}\n${r.stdout?.slice(-2000)}`);
     let res: any;
     try { res = JSON.parse(r.stdout); } catch { fail(`claude -p の出力を JSON として読めません:\n${r.stdout.slice(-2000)}`); }
