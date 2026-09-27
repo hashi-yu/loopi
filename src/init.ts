@@ -114,7 +114,12 @@ export function init(opts: { force: boolean }): never {
       protectedPaths: [adr, agents, ".github/", ".claude/"].filter(Boolean),
       holdOnChange: [spec].filter(Boolean),
       test: { command: test.command, reportCommand: test.reportCommand },
-      models: { pi: { provider: "opencode-go", model: "deepseek-v4.1-flash" }, claude: { model: "claude-fable-5-1" } },
+      // 3 ツールともモデルと effort を明示し、各ツール側の既定（~/.codex/config.toml など）に左右されないようにする
+      models: {
+        pi: { provider: "opencode-go", model: "deepseek-v4.1-flash", effort: "medium" },
+        claude: { model: "claude-fable-5-1", effort: "high" },
+        codex: { model: "gpt-5.6-sol", effort: "medium" },
+      },
       limits: { maxReviewRounds: 3, maxTestFixes: 3 },
       noAutomergeLabel: "no-automerge",
     };
@@ -183,6 +188,7 @@ export function init(opts: { force: boolean }): never {
     console.log("");
   }
   if (settingsAdvice) console.log(settingsAdvice + "\n");
+  if (wrote.includes(CONFIG_FILENAME)) console.log(`${CONFIG_FILENAME} の models（pi / claude / codex）のモデルと effort は、使える環境に合わせて直してください。\n`);
   console.log(`次: ${CONFIG_FILENAME} を確認してから \`npx github:hashi-yu/loopi run <issue番号>\``);
   process.exit(0);
 }
