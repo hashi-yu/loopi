@@ -17,6 +17,7 @@ import path from "node:path";
 import { createAgentSession, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
 import { Codex, type ModelReasoningEffort, type ThreadOptions } from "@openai/codex-sdk";
 import { type Config, applyProfile, docSentence, loadConfig } from "./config.js";
+import { claudeChildEnv } from "./env.js";
 import { classifyExit } from "./exit.js";
 
 export type RunOptions = { issue: string; noMerge: boolean; fresh: boolean; config?: string; profile?: string };
@@ -135,13 +136,20 @@ export async function run(opts: RunOptions): Promise<never> {
     process.exit(2);
   }
 
+  // 差分の比較先は、作業ブランチと origin/<baseBranch> の分岐点（merge-base）。
+  // origin/<baseBranch> と直接比べると、実行中に fetch で進んだ分が「逆向きの変更」として混ざる。
+  // 工程 6 の取り込み後は分岐点が動くので、キャッシュせず呼ぶたびに求める
+  // （git 2.30 未満にも対応するため `git diff --merge-base` は使わない）
+  function diffBase() {
+    return must(`git merge-base HEAD ${ORIGIN_BASE}`, wt).trim();
+  }
   function changedFiles() {
     runCmd("git add -A", wt);
-    return must(`git diff --cached --name-only ${ORIGIN_BASE}`, wt).split("\n").filter(Boolean);
+    return must(`git diff --cached --name-only ${diffBase()}`, wt).split("\n").filter(Boolean);
   }
   function stagedDiff() {
     runCmd("git add -A", wt);
-    return must(`git diff --cached ${ORIGIN_BASE}`, wt);
+    return must(`git diff --cached ${diffBase()}`, wt);
   }
   function checkProtected() {
     if (PROTECTED.length === 0) return;
@@ -150,6 +158,7 @@ export async function run(opts: RunOptions): Promise<never> {
   }
 
   // Claude Code をヘッドレスで呼び、JSON Schema に沿った結果を返す（読み取り専用）
+  // セッション由来の effort の環境変数は渡さない（effort は --effort でだけ指定する）
   function askClaude(prompt: string, input: string, schema: object) {
     const r = spawnSync("claude", [
       "-p", prompt,
@@ -159,7 +168,7 @@ export async function run(opts: RunOptions): Promise<never> {
       "--json-schema", JSON.stringify(schema),
       "--permission-mode", "dontAsk",
       "--allowedTools", "Read,Grep,Glob",
-    ], { cwd: wt, input, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, env: NON_INTERACTIVE });
+    ], { cwd: wt, input, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, env: claudeChildEnv(NON_INTERACTIVE) });
     if (r.status !== 0) failOrInterrupt(r.status, r.signal, `claude -p が失敗しました (exit ${r.status})\n${r.stderr}\n${r.stdout?.slice(-2000)}`);
     let res: any;
     try { res = JSON.parse(r.stdout); } catch { fail(`claude -p の出力を JSON として読めません:\n${r.stdout.slice(-2000)}`); }

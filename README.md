@@ -74,7 +74,7 @@ npx github:hashi-yu/loopi run 12 --profile fast  # profiles の名前でモデ�
 
 | キー | 意味 |
 |---|---|
-| `baseBranch` | 差分の基準・作業ブランチの起点・PR の base・マージ前の取り込み先（既定 `main`） |
+| `baseBranch` | 差分の基準（分岐点を求める相手）・作業ブランチの起点・PR の base・マージ前の取り込み先（既定 `main`） |
 | `branchPrefix` / `worktreeDir` | 作業ブランチ名と作業フォルダの置き場（既定 `issue-` / `..`） |
 | `docs` | 各エージェントに読ませる参照ドキュメント。すべて任意で、指定したものだけがプロンプトに載る |
 | `code.testDir` | 実装担当に「ここにテストを書け」と伝える場所（任意） |

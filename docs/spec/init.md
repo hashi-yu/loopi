@@ -14,9 +14,10 @@
 
 - `baseBranch`: `origin/HEAD` → 現在のブランチ → `main` の順
 - `docs`: `AGENTS.md` / `CLAUDE.md`、`docs/spec/` / `docs/specs/` / `spec/`、`docs/adr/` / `docs/decisions/` / `adr/` のうち最初に見つかったもの
-- `test`: `pyproject.toml` や `pytest.ini` → pytest、`go.mod` → `go test`、`Cargo.toml` → `cargo test`、`package.json` → `npm test`、`tests/` → pytest。どれも無ければ空にして提案を出す
+- `test`: `pyproject.toml` や `pytest.ini` → pytest、`go.mod` → `go test`、`Cargo.toml` → `cargo test`、`package.json` → `scripts.test` があれば `npm test`、無ければ（`scripts` 自体が無い場合も）空にして `scripts` の `typecheck` / `lint` / `test:*` を候補として提案する（JSON として読めなければ `npm test`）、`tests/` → pytest。どれも無ければ空にして提案を出す
 - `protectedPaths`: 見つかった ADR の置き場と AGENTS.md、`.github/`、`.claude/`
 - `holdOnChange`: 見つかった spec の置き場
+- `models`: `pi` / `claude` / `codex` の 3 ツールとも `model` と `effort` を明示する（`pi` は `provider` も）。値は README の設定例と同じで、環境に合わせて直すよう完了メッセージで案内する。`src/config.ts` の既定値（省略時はツールの既定）とは別
 
 ## 書かないもの
 
